@@ -10,6 +10,14 @@ Date: March 2022
 
 Ball = Class {}
 
+-- variables to adjust for infection rate
+infection_rate_uv = 13
+infection_rate_v = 26
+death_rate_uv = 100
+death_rate_v = 1000
+
+-- 3 for 30%
+lockdown_percentage = 3
 
 Status = {
    ["NORMAL"] = 1,
@@ -115,11 +123,11 @@ function Ball:collision_response(ball)
 	if self.state == Status.INFECTED and ball.state ~= Status.INFECTED then
 	
 		if ball.vaccinated then
-			if math.random(26) == 1 then
+			if math.random(infection_rate_v) == 1 then
 				ball.state = Status.INFECTED
 			end		
 		else
-			if math.random(13) == 1 then
+			if math.random(infection_rate_uv) == 1 then
 				ball.state = Status.INFECTED
 			end
 		end
@@ -128,11 +136,11 @@ function Ball:collision_response(ball)
 	if self.state ~= Status.INFECTED and ball.state == Status.INFECTED then
 	
 		if self.vaccinated then
-			if math.random(26) == 1 then
+			if math.random(infection_rate_v) == 1 then
 				self.state = Status.INFECTED
 			end		
 		else
-			if math.random(13) < 1 then
+			if math.random(infection_rate_uv) < 1 then
 				self.state = Status.INFECTED
 			end
 		end
@@ -151,7 +159,7 @@ function Ball:update(dt, mindset)
 
 	if mindset == Mindset.LOCKDOWN then
 	
-		if math.random(10) <= 3 then
+		if math.random(10) <= lockdown_percentage then
 			self.ax = -self.vx * 0.8
 			self.ay = -self.vy * 0.8
 					
@@ -196,7 +204,7 @@ function Ball:update_status(dt)
 		if self.sickTime <= 0 then
 			-- vaccinated, less chance of dying
 			if self.vaccinated then
-				if math.random(1000) == 1 then
+				if math.random(death_rate_v) == 1 then
 					self.state = Status.DEAD
 				else
 					self.state = Status.RECOVERED
@@ -204,7 +212,7 @@ function Ball:update_status(dt)
 					self.sickTime = 50
 				end			
 			else	-- unvaccinated, higher chance
-				if math.random(100) == 2 then
+				if math.random(death_rate_uv) == 2 then
 					--dead
 					self.state = Status.DEAD
 				else
