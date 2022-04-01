@@ -4,7 +4,7 @@ Contact: huang.chenting<AT>gmail.com
 Date: March 2022
 
 How to Open:
-1. Run Python 3 on npuzzle.py
+1. Run Python 3 on npuzzle.py, with pygame module imported.
 
 Controls / Instructions:
 RMOUSECLICK - shuffle puzzle tiles
