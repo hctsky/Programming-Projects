@@ -310,6 +310,9 @@ class NPuzzle:
 
     # animate solution, when animating, user should not be able to interrupt with actions
     def animate_solution(self):
+        if type(self.solution) == float:
+            self.animating = False
+            return False
         if len(self.solution) == 0:
             self.animating = False
             return False
@@ -361,24 +364,41 @@ def main():
 
         for i in range(len(state)):
             curr_x = state[i] % grid_size
-
-            if state[i] < grid_size:
-                curr_y = 0
-            elif state[i] >= grid_size * 2:
-                curr_y = 2
-            else:
-                curr_y = 1
-
             fixed_x = i % grid_size
-            if i < grid_size:
-                fixed_y = 0
-            elif i >= 2 * grid_size:
-                fixed_y = 2
-            else:
-                fixed_y = 1
 
-            accumulated_cost += abs(curr_x - fixed_x) + abs(curr_y - fixed_y)
-            #print (str(i) + " accumulated_cost so far: " + str(accumulated_cost))
+            curr_y = math.floor(state[i] / grid_size)
+            fixed_y = math.floor(i / grid_size)
+
+            current_step_cost = abs(curr_x - fixed_x) + abs(curr_y - fixed_y)
+            accumulated_cost += current_step_cost
+
+        # now, need to resolve horizontal linear conflicts
+        for i in range(len(state) - 1):
+            if state[i] > state[i+1]:
+                correct_row = math.floor(i / grid_size)
+
+                row_i = math.floor((state[i]) / grid_size)
+                row_i_plus_1 = math.floor((state[i+1]) / grid_size)
+
+                current_i_plus_1_row = (i+1) / grid_size
+
+                if row_i == row_i_plus_1 and row_i == correct_row and current_i_plus_1_row == correct_row:
+                    if state[i] != 0 and state[i+1] != 0:
+                        accumulated_cost += 2
+
+        # vertical linear conflicts
+        for i in range(grid_size):
+            for j in range(grid_size):
+                if state[i] > state[i+grid_size*j]:
+                    correct_col = (i + 1) % grid_size
+                    col_i = (state[i] + 1) % grid_size
+                    col_i_plus_1 = (state[i+grid_size*j] + 1) % grid_size
+
+                    correct_col_plus_1 = (i+grid_size*j + 1) % grid_size
+
+                    if col_i == col_i_plus_1 and col_i == correct_col and correct_col == correct_col_plus_1:
+                        if state[i] != 0 and state[i+1] != 0:
+                            accumulated_cost += 2
 
         return round(accumulated_cost)
 
@@ -455,6 +475,91 @@ def main():
         return []
         #print("checked_state_list len : " + str(len(checked_state_list)))
 
+    # IDA* implementation
+    def solve_idastar():
+        node_start = Node(npuzzle.tiles, manhattan_distance(npuzzle.tiles, npuzzle.grid_size))
+        node_start.local_goal = 0
+        node_start.global_goal = heuristic(node_start)
+
+        f_bound = node_start.global_goal
+
+        r = 0
+        # while limited_dfs returns the next minimum bound instead of a path
+        while (str(r).isdigit() == True):
+            r = limited_dfs(node_start, f_bound, manhattan_distance(npuzzle.tiles, npuzzle.grid_size))
+            if str(r).isdigit():
+                f_bound = r
+        return r
+
+
+    def limited_dfs(node, f_bound, heuristic):
+
+        #print("new dfs round: ")
+        done = False
+        minimum = math.inf
+        target_state = set_target_state()
+        list_to_check = []
+
+        list_to_check.append(node)
+        f = node.global_goal
+
+        while done == False:
+            #print("Node tile:" +str(node.state))
+            if len(list_to_check) > 0:
+                list_to_check.sort()
+                node = list_to_check[0]
+                f = node.global_goal
+            else:
+                #print("minimum: " + str(minimum))
+                return minimum
+
+            if f <= f_bound:
+                #print("examining state: " + str(node.state))
+                if node.state == target_state:
+                    print("path found")
+                    solution_list = []
+                    while(node.parent_node):
+                        solution_list.insert(0, node.parent_move)
+                        node = node.parent_node
+                    print("solution size: " + str(solution_list))
+                    return solution_list
+                else:
+                    neighbour_list = npuzzle.find_neighbours_of_zero(node.state)
+
+                    for nb in neighbour_list:
+                        o_state = node.state
+                        nb_state = npuzzle.move_tile(o_state, nb)
+                        #print("nb_state created: " + str(nb_state))
+                        nb_node = Node(nb_state, manhattan_distance(nb_state, npuzzle.grid_size))
+                        nb_node.parent_node = node
+                        nb_node.parent_move = nb
+                        nb_node.local_goal = node.local_goal + 1
+                        nb_node.global_goal = nb_node.local_goal + nb_node.heuristic
+
+                        if (nb_node not in list_to_check):
+                            list_to_check.append(nb_node)
+                            #print("appended nb state: " + str(nb_state))
+
+            else:
+                if f < minimum or minimum == None:
+                    minimum = f
+                    #print("new f_bound: " + str(minimum))
+            try:
+                list_to_check.pop(0)
+            except:
+                done = True
+
+            #print("list_to_check size: " + str(len(list_to_check)))
+
+        #print("minimum: " + str(minimum))
+        return minimum
+
+
+
+
+
+
+
     # handling of mouse and keyboard input in game loop
     def handle_input(npuzzle):
         # see mouse select which tile
@@ -476,12 +581,17 @@ def main():
 
             elif mouse_presses[2]:
                 npuzzle.shuffle_tiles()
+                print("manhattan distance: " + str(manhattan_distance(npuzzle.tiles, npuzzle.grid_size)))
 
         if event.type == pygame.KEYDOWN:
             keys = pygame.key.get_pressed()
-            if keys[pygame.K_a]:
+            if keys[pygame.K_a] and not npuzzle.animating:
                 npuzzle.solution = solve_astar()
                 npuzzle.animating = True
+            if keys[pygame.K_z] and not npuzzle.animating:
+                npuzzle.solution = solve_idastar()
+                npuzzle.animating = True
+
             if keys[pygame.K_h]:
                 npuzzle.solution = solve_astar()
 
@@ -516,6 +626,7 @@ def main():
     # shuffle at the start
     npuzzle.shuffle_tiles()
     #print("tiles: " + str(npuzzle.tiles))
+    print("manhattan distance: " + str(manhattan_distance(npuzzle.tiles, npuzzle.grid_size)))
 
     # game loop
     running = True
