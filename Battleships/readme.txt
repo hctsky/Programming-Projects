@@ -12,7 +12,7 @@ Instructions:
 2. Open up attacker file. Use buttons to reset grid to all zeroes, or drop bombs ('1'.)
 3. Additional bombs can be placed by manually inputting 1s into the cells.
 4. Map size and Ammo count can be changed in VBA under Developer tab. If you change this, you have to change the MAPSIZE variable in the battleships.py file as well.
-5. Save attacker_map.xlsx file when ready.
+5. Save and close attacker_map.xlsx file when ready.
 
 6. Run python 3 on battleships.py.
 
