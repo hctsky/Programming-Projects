@@ -1,5 +1,5 @@
 - 👋 Hi, I’m @hctsky
-- 👀 I’m interested in game programming.
+- 👀 I’m interested in game programming, and improving my IT skills in general.
 - 🌱 I’m currently learning Python programming, and I aim to upload more demo projects here as part of my programming portfolio.
 - 📫 How to reach me ...
 
